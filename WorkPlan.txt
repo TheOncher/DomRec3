@@ -7,3 +7,6 @@ each container will check on its own using the Credentials.ini or Credentials.js
 and will perform a check that all schemas exist, and build whatever missing on the DB
 
 After that it will start running indefinetly and adding information to the DB.
+
+WindowsSetup.bat -> Explained about BE - Database Connector, ask and request creds for the main databse for the DomRec-Credentials table,continuesly asks creds for every database that we should save output(json) to -> creates a list of databases in defined order to get credentials from if one crashes -> Tests connection to database, creates the DomRec-Credentials Table -> from now on there is a list of databases to take credentials is the current ones does not work, the services should automatically request their new credentials.
+Asks what BE Services should run, turn them on and listen for incoming json data, dynamicly create tablesm rows and columns in the databases according to recieved data
