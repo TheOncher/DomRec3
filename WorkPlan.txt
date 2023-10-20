@@ -1,0 +1,9 @@
+WindowsSetup.bat will call WindowsSetup.ps1
+both sh file and ps1 file will ask forthe credentials for the DB, and build the Credentials schema accordingly,
+after that it will ask what container service you want to start and ask for DB credentials and other DB information,
+it will then start the container using the local dockerfile configuraion and keep going for the next container
+
+each container will check on its own using the Credentials.ini or Credentials.json file, what is the DB and how to connect to it,
+and will perform a check that all schemas exist, and build whatever missing on the DB
+
+After that it will start running indefinetly and adding information to the DB.
