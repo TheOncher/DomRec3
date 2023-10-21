@@ -17,34 +17,46 @@ Function Test-Administrator {
     return (New-Object Security.Principal.WindowsPrincipal $user).IsInRole([Security.Principal.WindowsBuiltinRole]::Administrator)  
 }
 
-# Function Get-DatabaseNumber
+# Function Get-DatabaseListInfo
 Function Get-DatabaseListInfo {
     # Parameters
     Param (
-        [Parameter()][switch]$DBListInString,
-        [Parameter()][int]$DatabaseNumber,
-        [Parameter()][string]$DBList
+        [Parameter()][switch]$DBAmount,
+        [Parameter()][switch]$DBListMenu,
+        [Parameter()][string]$DBNumberFromName = "",
+        [Parameter()][int]$DBNameFromNumber = 0,
+        [Parameter(Mandatory = $True)][hashtable]$DBHashtable
     )
-    if ($DBListInString.IsPresent) { 
-        $DBListInStringString = ""
-        Foreach ($Database in $DBList.GetEnumerator()) {
 
-            $DBListInStringString += "$($Database.Name). $($Database.Value)"
+    # Return how many Databases are in the Hashtable
+    if ($DBAmount.IsPresent) { return $DBHashtable.Count }
+
+    # Return a string menu with all of the Databases
+    if ($DBListMenu.IsPresent) {
+        $DBListMenuString = ""
+        $DBHashtable.GetEnumerator() | ForEach-Object {
+            $DBListMenuString += "$($_.Name). $($_.Value)`n"
         }
-        Write-Host $DBListInStringString
-        return $DBListInStringString
+        return $DBListMenuString
     }
 
-    $DatabasesDictionary = @{}
-    $DatabasesList = $DatabasesList.Split("`n")
-    $DatabasesList | Foreach-Object { 
-        Write-Host $_
-        $DatabaseLine = $_.Split(". ")
-        Write-Host $([int]($DatabaseLine[0]))
-        $DatabasesDictionary.Add([int]($DatabaseLine[0]), [string]($DatabaseLine[1]))
+    # Return the number of a Database from its name
+    if ($DBNumberFromName -ne "") {
+        $DBNumberFromName = [string]$DBNumberFromName 
+        $DBHashtable.GetEnumerator() | ForEach-Object {
+            if ($($_.Value) -eq $DBNumberFromName )
+            { return $_.Name; break }
+        }
     }
-    Write-Host $DatabasesDictionary
-    return $DatabasesDictionary
+
+    # Return the name of a Database from its number
+    if ($DBNameFromNumber -ne 0) {
+        $DBNameFromNumber = [string]$DBNameFromNumber 
+        $DBHashtable.GetEnumerator() | ForEach-Object {
+            if ($($_.Name) -eq $DBNameFromNumber )
+            { return $_.Value; break }
+        }
+    }
 }
 
 # Function Check-Dependencies
@@ -89,8 +101,8 @@ Function Check-Dependencies {
     Clear-Host
 }
 
-# Function Explain-DatabaseConnector
-Function Explain-DatabaseConnector {
+# Function Invoke-DatabaseConnector
+Function Invoke-DatabaseConnector {
     # Starting Database Connector Explanation, How to Configure
     Write-Host "At First you need to set up your Database `n$DomRecVersion Supports $($DatabasesList.Count) Different Databases, `n$(Get-DatabaseListInfo -DBListInString $True) `nYou can set up one of each and they will work simultaneously, `nAll Data will be saved to all of them for back up"
 
@@ -131,31 +143,19 @@ Function Invoke-Container {
     
 }
 
-
-# Retrieving all Containers Folders
-$ContainerFolders = (Get-ChildItem -Path "$PSScriptRoot" -Filter "*Service - Act*" | Select-Object FullName).FullName
-
-# Foreach Container Folder ask for Credentials to DB
-$ContainerFolders | Foreach-Object {
-    #Invoke-Container -ContainerPath $_
-}
-
 # ---------------------------------------------------------------- #
 
-# Start of "Main"
+# Start of Main Code
 Write-Host "Warming up..."
 Start-Sleep -Seconds 3
-# Checking for Dependencies
+Clear-Host
+
+# Checking for Checking Dependencies
 Check-Dependencies
-Write-Host "Welcome to $DomRecVersion"
-# Invoking the Database Connector
-Explain-DatabaseConnector
 
+# Starting Database Connector
+Invoke-DatabaseConnector
 
-# Explanation of the Project and containers 
+# Starting Frontend GUI
 
-
-
-
-
-# Invoking Backend Connectors
+# Looping through all Backend Services and Starting them
