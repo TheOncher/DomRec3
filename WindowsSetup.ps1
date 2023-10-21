@@ -9,6 +9,7 @@ $ConstScriptName = Split-Path -Path $($MyInvocation.InvocationName) -Leaf
 $ConstContainerName_BackendDatabaseConnector = "BE Service - Database Connector"
 $ConstContainerName_FrontendGUI = "FE Service - GUI"
 $ConstDatabasesList = [ordered]@{"1" = "PostgresSQL"; "2" = "MongoDB"; "3" = "MicrosoftSQL"; "4" = "MySQL"; "5" = "SQLite" }
+$ConstDatabasesCredentialsSchema = [PSCustomObject]@{"Address" = ""; "Port/Path" = ""; "Username" = ""; "Password" = ""; "CredsTable" = "DomRec-Credentials" }
 
 # ------------------------------------------------------------------------- #
 
@@ -72,6 +73,7 @@ Function Get-DatabaseListInfo {
     Param (
         [Parameter()][switch]$DBAmount,
         [Parameter()][switch]$DBListMenu,
+        [Parameter()][switch]$DBListArray,
         [Parameter()][string]$DBNumberFromName = "",
         [Parameter()][int]$DBNameFromNumber = 0,
         [Parameter(Mandatory = $True)][hashtable]$DBHashtable
@@ -88,6 +90,17 @@ Function Get-DatabaseListInfo {
         }
         return $DBListMenuString
     }
+
+    # Returns an array of the databases number in a string format with "/" as seperators
+    if ($DBListArray.IsPresent) {
+        $DBNumbersArray = ""
+        $DBHashtable.GetEnumerator() | ForEach-Object {
+            $DBNumbersArray += "$($_.Name)/"
+        }
+        $DBNumbersArray = $DBNumbersArray.Substring(0, ($DBNumbersArray.Length) - 1)
+        return $DBNumbersArray
+    }
+
 
     # Return the number of a Database from its name
     if ($DBNumberFromName -ne "") {
@@ -110,19 +123,47 @@ Function Get-DatabaseListInfo {
 
 # Function Invoke-DatabaseConnector
 Function Invoke-DatabaseConnector {
-    # Starting Database Connector Explanation, How to Configure
-    Write-Host "At First you need to set up your Database `n$ConstDomRecVersion Supports $($ConstDatabasesList.Count) Different Databases, `n$(Get-DatabaseListInfo -DBListInString $True) `nYou can set up one of each and they will work simultaneously, `nAll Data will be saved to all of them for back up"
+
+    # Setting Variables for upcoming text
+    $DatabasesAmount = Get-DatabaseListInfo -DBAmount -DBHashtable $ConstDatabasesList
+    $DatabasesMenu = Get-DatabaseListInfo -DBListMenu -DBHashtable $ConstDatabasesList
+    $DatabasesNumbersArray = Get-DatabaseListInfo -DBListArray -DBHashtable $ConstDatabasesList
 
     # Acquiring DB Credentials Json from the Backend Database Connector Service
-    $DBCredentials = (Get-Content -Path "$PSScriptRoot\\$ConstContainerName_BackendDatabaseConnector\\Configuration\\DBCredentials.json" | ConvertFrom-Json)
+    if (Test-Path -Path "$PSScriptRoot\\$ConstContainerName_BackendDatabaseConnector\\Configuration\\DBCredentials.json")
+    { $DBConnectorCredentials = (Get-Content -Path "$PSScriptRoot\\$ConstContainerName_BackendDatabaseConnector\\Configuration\\DBCredentials.json" | ConvertFrom-Json) }
+    else { $DBConnectorCredentials = $ConstDatabasesCredentialsSchema }
 
     # Starting the Databases Configuration
-    #While ($DatabaseNumber)
-    $DatabaseNumber = [string](Read-Host "What Database do you want to configure? [1/2/3/4/5]")
-    $DatabasesDictionary = Get-DatabaseListInfo -DatabaseNumber $DatabaseNumber -DatabasesList $DatabasesList
-    Switch ($DatabaseNumber) { 
-        "1" { Write-Host $($DatabasesDictionary[$DatabaseNumber]) }
-        default { Write-Host "dd" }
+    $StopDBConfigurationFlag = $False
+    While ($StopDBConfigurationFlag -eq $False) {
+        Clear-Host
+        Write-Host "At First you need to set up your Database `n$ConstDomRecVersion Supports $DatabasesAmount Different Databases, `n$DatabasesMenu  `nYou can set up one of each and they will work simultaneously, `nAll Data will be saved to all of them for back up, `nIf you choose to configure more Databases in the future, the existing data will not be replicated,`n Future data will be added to the newly configured databases "
+
+        # Ask for what DB to be configured
+        $DatabaseNumber = [string](Read-Host "What Database do you want to configure? [$DatabasesNumbersArray] or [0] to Save")
+
+        # Configuring each Database
+        Switch ($DatabaseNumber) { 
+            # Saving Configuration and writing to DBCredentials.json file
+            "0" { Write-Host "Saving Configuration"; $StopDBConfigurationFlag = $True }
+
+            # Configuration for all available database number
+            "$DatabaseNumber" {
+
+                # Break if number doesnt exist in DB numbers array
+                if ( !($DatabasesNumbersArray.Contains($DatabaseNumber)) -or ("" -eq $DatabaseNumber)) { break }
+
+                # Continue Configuration if number exist in DB numbers array
+                Write-Host "`nCurrent Configuration for '$(Get-DatabaseListInfo -DBNameFromNumber $DatabaseNumber -DBHashtable $ConstDatabasesList)'"
+                Write-Host $DBConnectorCredentials.$(Get-DatabaseListInfo -DBNameFromNumber $DatabaseNumber -DBHashtable $ConstDatabasesList)
+                $DBConfigurationEntry = (Read-Host -Prompt "`nWhat entry would you like to edit [Exmaple: Address]")
+                $Host.UI.ReadLine()
+            }
+            
+            # User hit enter, so asking again for number
+            default { }
+        }
     }
 
 }
