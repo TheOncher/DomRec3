@@ -131,6 +131,23 @@ Function Get-DatabaseListInfo {
     }
 }
 
+# Function Get-MSSQLInstancesPort
+Function Get-MSSQLInstancesPort {
+
+    param ([string]$Server)
+
+    [system.reflection.assembly]::LoadWithPartialName("Microsoft.SqlServer.Smo") | Out-Null
+    [system.reflection.assembly]::LoadWithPartialName("Microsoft.SqlServer.SqlWmiManagement") | Out-Null
+    $mc = new-object Microsoft.SqlServer.Management.Smo.Wmi.ManagedComputer $Server
+    $Instances = $mc.ServerInstances
+
+    foreach ($Instance in $Instances) {
+        $port = @{Name = "Port"; Expression = { $_.ServerProtocols['Tcp'].IPAddresses['IPAll'].IPAddressProperties['TcpPort'].Value } }
+        $Parent = @{Name = "Parent"; Expression = { $_.Parent.Name } }
+        $Instance | Select-Object $Parent, Name, $Port
+    }
+}
+
 # Function Test-DatabaseCredentials
 Function Test-DatabaseCredentials {
     # Parameters
@@ -140,19 +157,39 @@ Function Test-DatabaseCredentials {
     )
 
     # Trying to connect to Databases
-    Switch (DBName) {
+    Switch ($DBName) {
         # Testing Connection to 
         "PostgresSQL" {
             
         }
         # Testing Connection to 
-        "MongoDB" {}
+        "MongoDB" {
+
+        }
         # Testing Connection to 
-        "MicrosoftSQL" {}
+        "MicrosoftSQL" {
+            # Testing Connection to SQL Server
+            if ((Test-NetConnection -ComputerName ($DBCreds.Address) -Port ($DBCreds."Port/Path")).TcpTestSucceeded -ne "True")
+            { return $False }
+
+            # Importing SqlServer Module for powershell
+            Import-Module -Name "$PSScriptRoot\Dependencies\SqlServer\22.1.1\SqlServer.psd1"
+
+            # Getting the MSSQL Instance
+            $MSSQLInstanceName = Invoke-Command -ComputerName ($DBCreds.Address) -ScriptBlock { (Get-MSSQLInstancesPort -Server ($DBCreds.Address)).Name }
+            Write-Host "$MSSQLInstanceName"
+            return $True
+            
+
+        }
         # Testing Connection to 
-        "MySQL" {}
+        "MySQL" {
+
+        }
         # Testing Connection to 
-        "SQLite" {}
+        "SQLite" {
+
+        }
 
         # Ignore switch statement if DBName is incorrect
         default {}
@@ -238,8 +275,15 @@ Function Invoke-DatabaseConnector {
                 }
                
                 # Trying Credentials to Connect Database
-                Test-DatabaseCredentials -DBName $SelectedDatabaseConfigurationName -DBCreds $($DBConnectorCredentials.$SelectedDatabaseConfigurationName)
+                $DatabaseConnectionStatus = Test-DatabaseCredentials -DBName $SelectedDatabaseConfigurationName -DBCreds $($DBConnectorCredentials.$SelectedDatabaseConfigurationName)
+
+                # Return Database Connection Status
+                if ($DatabaseConnectionStatus -eq $True) 
+                { Write-Host "Connection to $SelectedDatabaseConfigurationName was Succsesfull!" }
+                else 
+                { Write-Host "Connection to $SelectedDatabaseConfigurationName was unSuccsesfull!" }
                 Start-Sleep -Seconds 3
+                Clear-Host
 
             }
             
