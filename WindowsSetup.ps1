@@ -2,14 +2,14 @@
 #Requires -PSEdition Desktop
 
 # Constants
-$ConstDomRecVersion = "DomRec3 v1"
-$ConstDockerServiceName = "com.docker.service"
-$ConstDockerServiceNameDefault = "com.docker.service"
-$ConstScriptName = Split-Path -Path $($MyInvocation.InvocationName) -Leaf
-$ConstContainerName_BackendDatabaseConnector = "BE Service - Database Connector"
-$ConstContainerName_FrontendGUI = "FE Service - GUI"
-$ConstDatabasesList = [ordered]@{"1" = "PostgresSQL"; "2" = "MongoDB"; "3" = "MicrosoftSQL"; "4" = "MySQL"; "5" = "SQLite" }
-$ConstDatabasesCredentialsSchema = [PSCustomObject]@{"Address" = ""; "Port/Path" = ""; "Username" = ""; "Password" = ""; "CredsTable" = "DomRec-Credentials" }
+Set-Variable -Option "Constant" -Name "ConstDomRecVersion" -Value "DomRec3 v1"
+Set-Variable -Option "Constant" -Name "ConstDockerServiceName" -Value "com.docker.service"
+Set-Variable -Option "Constant" -Name "ConstDockerServiceNameDefault" -Value "com.docker.service"
+Set-Variable -Option "Constant" -Name "ConstScriptName" -Value $(Split-Path -Path $($MyInvocation.InvocationName) -Leaf)
+Set-Variable -Option "Constant" -Name "ConstContainerName_BackendDatabaseConnector" -Value "BE Service - Database Connector"
+Set-Variable -Option "Constant" -Name "ConstContainerName_FrontendGUI" -Value "FE Service - GUI"
+Set-Variable -Option "Constant" -Name "ConstDatabasesList" -Value $([ordered]@{"1" = "PostgresSQL"; "2" = "MongoDB"; "3" = "MicrosoftSQL"; "4" = "MySQL"; "5" = "SQLite" })
+Set-Variable -Option "Constant" -Name "ConstDatabasesCredentialsSchema" -Value $([PSCustomObject]@{"Address" = ""; "Port/Path" = ""; "Username" = ""; "Password" = ""; "CredsTable" = "DomRec-Credentials" })
 
 # ------------------------------------------------------------------------- #
 
@@ -73,10 +73,12 @@ Function Get-DatabaseListInfo {
     Param (
         [Parameter()][switch]$DBAmount,
         [Parameter()][switch]$DBListMenu,
-        [Parameter()][switch]$DBListArray,
+        [Parameter()][switch]$DBNumbersListArray,
+        [Parameter()][switch]$DBSchemaListArray,
         [Parameter()][string]$DBNumberFromName = "",
         [Parameter()][int]$DBNameFromNumber = 0,
-        [Parameter(Mandatory = $True)][hashtable]$DBHashtable
+        [Parameter()][hashtable]$DBHashtable,
+        [Parameter()][PSCustomObject]$DBSchema
     )
 
     # Return how many Databases are in the Hashtable
@@ -92,7 +94,7 @@ Function Get-DatabaseListInfo {
     }
 
     # Returns an array of the databases number in a string format with "/" as seperators
-    if ($DBListArray.IsPresent) {
+    if ($DBNumbersListArray.IsPresent) {
         $DBNumbersArray = ""
         $DBHashtable.GetEnumerator() | ForEach-Object {
             $DBNumbersArray += "$($_.Name)/"
@@ -100,7 +102,15 @@ Function Get-DatabaseListInfo {
         $DBNumbersArray = $DBNumbersArray.Substring(0, ($DBNumbersArray.Length) - 1)
         return $DBNumbersArray
     }
-
+    
+    # Returns an array of the databases configuration in an list format with "/" as seperators
+    if ($DBSchemaListArray.IsPresent) {
+        $DBSchemaArray = @()
+        $DBSchema.PSObject.Properties | ForEach-Object {
+            $DBSchemaArray += "$($_.Name)"
+        }
+        return $DBSchemaArray
+    }
 
     # Return the number of a Database from its name
     if ($DBNumberFromName -ne "") {
@@ -121,18 +131,51 @@ Function Get-DatabaseListInfo {
     }
 }
 
+# Function Test-DatabaseCredentials
+Function Test-DatabaseCredentials {
+    # Parameters
+    Param(
+        [Parameter()][string]$DBName,
+        [Parameter()][PSCustomObject]$DBCreds
+    )
+
+    # Trying to connect to Databases
+    Switch (DBName) {
+        # Testing Connection to 
+        "PostgresSQL" {
+            
+        }
+        # Testing Connection to 
+        "MongoDB" {}
+        # Testing Connection to 
+        "MicrosoftSQL" {}
+        # Testing Connection to 
+        "MySQL" {}
+        # Testing Connection to 
+        "SQLite" {}
+
+        # Ignore switch statement if DBName is incorrect
+        default {}
+    }
+
+}
+
 # Function Invoke-DatabaseConnector
 Function Invoke-DatabaseConnector {
 
     # Setting Variables for upcoming text
-    $DatabasesAmount = Get-DatabaseListInfo -DBAmount -DBHashtable $ConstDatabasesList
-    $DatabasesMenu = Get-DatabaseListInfo -DBListMenu -DBHashtable $ConstDatabasesList
-    $DatabasesNumbersArray = Get-DatabaseListInfo -DBListArray -DBHashtable $ConstDatabasesList
+    $DatabasesAmount = Get-DatabaseListInfo -DBAmount -DBHashtable $ConstDatabasesList;
+    $DatabasesMenu = Get-DatabaseListInfo -DBListMenu -DBHashtable $ConstDatabasesList;
+    $DatabasesNumbersArray = Get-DatabaseListInfo -DBNumbersListArray -DBHashtable $ConstDatabasesList;
+    $DatabasesSchemaArray = Get-DatabaseListInfo -DBSchemaListArray -DBSchema $ConstDatabasesCredentialsSchema;
 
     # Acquiring DB Credentials Json from the Backend Database Connector Service
     if (Test-Path -Path "$PSScriptRoot\\$ConstContainerName_BackendDatabaseConnector\\Configuration\\DBCredentials.json")
-    { $DBConnectorCredentials = (Get-Content -Path "$PSScriptRoot\\$ConstContainerName_BackendDatabaseConnector\\Configuration\\DBCredentials.json" | ConvertFrom-Json) }
-    else { $DBConnectorCredentials = $ConstDatabasesCredentialsSchema }
+    { $DBConnectorCredentials = [PSCustomObject](Get-Content -Path "$PSScriptRoot\\$ConstContainerName_BackendDatabaseConnector\\Configuration\\DBCredentials.json" | ConvertFrom-Json) }
+    else {
+        $DBConnectorCredentials = [PSCustomObject]@{} #$ConstDatabasesCredentialsSchema }
+    }
+    Write-Host "DBConnectorCredentials: $DBConnectorCredentials"
 
     # Starting the Databases Configuration
     $StopDBConfigurationFlag = $False
@@ -144,9 +187,15 @@ Function Invoke-DatabaseConnector {
         $DatabaseNumber = [string](Read-Host "What Database do you want to configure? [$DatabasesNumbersArray] or [0] to Save")
 
         # Configuring each Database
-        Switch ($DatabaseNumber) { 
+        Clear-Host
+        Switch ($DatabaseNumber) {
+
             # Saving Configuration and writing to DBCredentials.json file
-            "0" { Write-Host "Saving Configuration"; $StopDBConfigurationFlag = $True }
+            "0" {
+                Write-Host "Saving Configuration"
+                Out-File -FilePath "$PSScriptRoot\\$ConstContainerName_BackendDatabaseConnector\\Configuration\\DBCredentials.json" -InputObject $($DBConnectorCredentials | ConvertTo-Json)
+                $StopDBConfigurationFlag = $True
+            }
 
             # Configuration for all available database number
             "$DatabaseNumber" {
@@ -154,11 +203,44 @@ Function Invoke-DatabaseConnector {
                 # Break if number doesnt exist in DB numbers array
                 if ( !($DatabasesNumbersArray.Contains($DatabaseNumber)) -or ("" -eq $DatabaseNumber)) { break }
 
-                # Continue Configuration if number exist in DB numbers array
-                Write-Host "`nCurrent Configuration for '$(Get-DatabaseListInfo -DBNameFromNumber $DatabaseNumber -DBHashtable $ConstDatabasesList)'"
-                Write-Host $DBConnectorCredentials.$(Get-DatabaseListInfo -DBNameFromNumber $DatabaseNumber -DBHashtable $ConstDatabasesList)
-                $DBConfigurationEntry = (Read-Host -Prompt "`nWhat entry would you like to edit [Exmaple: Address]")
-                $Host.UI.ReadLine()
+                # Starting to edit the configuration
+                $DBConfigurationEntry = ""
+                While ($DBConfigurationEntry -ne "Save") {
+
+                    # Continue Configuration if number exist in DB numbers array
+                    $SelectedDatabaseConfigurationName = $(Get-DatabaseListInfo -DBNameFromNumber $DatabaseNumber -DBHashtable $ConstDatabasesList)
+                    Write-Host "`n-------------------------------------------------------------------------------"
+                    Write-Host "Current Configuration for '$SelectedDatabaseConfigurationName'"
+
+                    # Create empty configuration if doesnt exist
+                    if ($null -eq $($DBConnectorCredentials.$SelectedDatabaseConfigurationName))
+                    { $DBConnectorCredentials | Add-Member -MemberType NoteProperty -Name "$SelectedDatabaseConfigurationName" -Value $($ConstDatabasesCredentialsSchema.PsObject.Copy()) }
+                    Write-Host $($DBConnectorCredentials.$SelectedDatabaseConfigurationName)
+                    Write-Host "-------------------------------------------------------------------------------"
+
+                    # Asking for entry to edit
+                    $DBConfigurationEntry = (Read-Host -Prompt "`nWhat entry would you like to edit [Exmaple: Address] `n Write [Save] to Exit and Save Configuration")
+                    Switch ($DBConfigurationEntry) {
+                        "" { }
+
+                        # if entry exist than edit it
+                        "$DBConfigurationEntry" { 
+                            if ( $DatabasesSchemaArray.Contains($DBConfigurationEntry) ) {
+                                $DBConfigurationEntryValue = (Read-Host -Prompt "What is the Value you would like to enter for the $SelectedDatabaseConfigurationName [$DBConfigurationEntry]")
+                                $($DBConnectorCredentials.$SelectedDatabaseConfigurationName).$DBConfigurationEntry = $DBConfigurationEntryValue
+                            }
+                            Clear-Host
+                        }
+
+                        # Ask again if user hits enter or misspelled
+                        default { }
+                    }
+                }
+               
+                # Trying Credentials to Connect Database
+                Test-DatabaseCredentials -DBName $SelectedDatabaseConfigurationName -DBCreds $($DBConnectorCredentials.$SelectedDatabaseConfigurationName)
+                Start-Sleep -Seconds 3
+
             }
             
             # User hit enter, so asking again for number
