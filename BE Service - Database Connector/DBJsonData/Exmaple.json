@@ -1,0 +1,18 @@
+{
+    "DomRec-ActiveDirectory:2023-10-27-10-55": [
+        {
+            "ComputerID": "UUDD-8855",
+            "ComputerName": "SRV-Automations",
+        },
+        {
+            "ComputerID": "UUDD-8855",
+            "ComputerName": "SRV-Automations",
+            "ComputerIP": "150.100.50.100"
+        },
+        {
+            "ComputerID": "UUDD-8855",
+            "ComputerName": "SRV-Automations",
+            "ComputerIP": "150.100.50.100"
+        }
+    ]
+}
