@@ -169,15 +169,18 @@ Function Test-DatabaseCredentials {
         # Testing Connection to 
         "MicrosoftSQL" {
             # Testing Connection to SQL Server
-            if ((Test-NetConnection -ComputerName ($DBCreds.Address) -Port ($DBCreds."Port/Path")).TcpTestSucceeded -ne "True")
+            if ((Test-NetConnection -ComputerName ($DBCreds.Address) -Port ($DBCreds."Port/Path") 1>$null).TcpTestSucceeded -ne "True")
             { return $False }
 
             # Importing SqlServer Module for powershell
             Import-Module -Name "$PSScriptRoot\Dependencies\SqlServer\22.1.1\SqlServer.psd1"
 
             # Getting the MSSQL Instance
-            $MSSQLInstanceName = Invoke-Command -ComputerName ($DBCreds.Address) -ScriptBlock { (Get-MSSQLInstancesPort -Server ($DBCreds.Address)).Name }
-            Write-Host "$MSSQLInstanceName"
+            $Pass = ConvertTo-SecureString "password" -AsPlainText -Force
+            [pscredential]$Creds = New-Object System.Management.Automation.PSCredential ("connectadmin@xyz.root", $Pass)
+            #$Creds = (Get-Credential)
+            $MSSQLInstanceName = Invoke-Command -ComputerName ($DBCreds.Address) -Credential $Creds -ScriptBlock {  Write-Host $($DBCreds.Address) }
+            Write-Host $MSSQLInstanceName
             return $True
             
 
@@ -217,6 +220,7 @@ Function Invoke-DatabaseConnector {
     # Starting the Databases Configuration
     $StopDBConfigurationFlag = $False
     While ($StopDBConfigurationFlag -eq $False) {
+        Clear-Host
         Clear-Host
         Write-Host "At First you need to set up your Database `n$ConstDomRecVersion Supports $DatabasesAmount Different Databases, `n$DatabasesMenu  `nYou can set up one of each and they will work simultaneously, `nAll Data will be saved to all of them for back up, `nIf you choose to configure more Databases in the future, the existing data will not be replicated,`n Future data will be added to the newly configured databases "
 
@@ -282,7 +286,7 @@ Function Invoke-DatabaseConnector {
                 { Write-Host "Connection to $SelectedDatabaseConfigurationName was Succsesfull!" }
                 else 
                 { Write-Host "Connection to $SelectedDatabaseConfigurationName was unSuccsesfull!" }
-                Start-Sleep -Seconds 3
+                Start-Sleep -Seconds 10
                 Clear-Host
 
             }
