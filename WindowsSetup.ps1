@@ -1,5 +1,6 @@
 # Requires
 #Requires -PSEdition Desktop
+#Requires -Version 5
 
 # Constants
 Set-Variable -Option "Constant" -Name "ConstDomRecVersion" -Value "DomRec3 v1"
@@ -19,8 +20,8 @@ Function Test-Administrator {
     return (New-Object Security.Principal.WindowsPrincipal $user).IsInRole([Security.Principal.WindowsBuiltinRole]::Administrator)  
 }
 
-# Function Check-Dependencies
-Function Check-Dependencies {
+# Function Get-Dependencies
+Function Get-Dependencies {
     Clear-Host
     # Check Docker Service Status
     $DockerServiceStatus = (Get-Service -Name "$ConstDockerServiceName" -ErrorAction SilentlyContinue ).Status
@@ -159,10 +160,12 @@ Function Test-DatabaseCredentials {
 
     # Trying to connect to Databases
     Switch ($DBName) {
+
         # Testing Connection to 
         "PostgresSQL" {
             
         }
+
         # Testing Connection to 
         "MongoDB" {
 
@@ -170,29 +173,28 @@ Function Test-DatabaseCredentials {
         # Testing Connection to 
         "MicrosoftSQL" {
             # Testing Connection to SQL Server
-            if ((New-Object System.Net.Sockets.TCPClient ($DBCreds.Address),($DBCreds."Port/Path")).Connected -ne "True")
+            if ((New-Object System.Net.Sockets.TCPClient ($DBCreds.Address), ($DBCreds."Port/Path")).Connected -ne "True")
             { return $False }
 
             # Importing SqlServer Module for powershell
             Import-Module -Name "$PSScriptRoot\Dependencies\SqlServer\22.1.1\SqlServer.psd1"
 
-            # Getting the MSSQL Instance
+            # Getting Credentials to Windows Server containing the Database
             $DatabaseWindowsUsername = Read-Host -Prompt "Please enter a user for the Windows Database Server"
             $DatabaseWindowsPassword = Read-Host -Prompt "Please enter a password for the Windows Database Server" -AsSecureString
-            #$Pass = ConvertTo-SecureString "password" -AsPlainText -Force
             $Creds = [pscredential](New-Object System.Management.Automation.PSCredential ($DatabaseWindowsUsername, $DatabaseWindowsPassword))
 
-            $VarGetMSSQLInstancesPort = ${function:Get-MSSQLInstancesPort}
+            # Getting the MSSQL Instance
             $MSSQLInstanceName = Invoke-Command -ComputerName ($DBCreds.Address) -Credential $Creds -ScriptBlock ${function:Get-MSSQLInstancesPort} -Argumentlist ($DBCreds.Address)
             Write-Host $MSSQLInstanceName
             return $True
-            
-
         }
+
         # Testing Connection to 
         "MySQL" {
 
         }
+
         # Testing Connection to 
         "SQLite" {
 
@@ -333,7 +335,7 @@ Start-Sleep -Seconds 3
 Clear-Host
 
 # Checking for Checking Dependencies
-Check-Dependencies
+Get-Dependencies
 
 # Starting Database Connector
 Invoke-DatabaseConnector
