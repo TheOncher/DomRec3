@@ -148,6 +148,7 @@ Function Get-MSSQLInstancesPort {
     }
 }
 
+
 # Function Test-DatabaseCredentials
 Function Test-DatabaseCredentials {
     # Parameters
@@ -169,17 +170,20 @@ Function Test-DatabaseCredentials {
         # Testing Connection to 
         "MicrosoftSQL" {
             # Testing Connection to SQL Server
-            if ((Test-NetConnection -ComputerName ($DBCreds.Address) -Port ($DBCreds."Port/Path") 1>$null).TcpTestSucceeded -ne "True")
+            if ((New-Object System.Net.Sockets.TCPClient ($DBCreds.Address),($DBCreds."Port/Path")).Connected -ne "True")
             { return $False }
 
             # Importing SqlServer Module for powershell
             Import-Module -Name "$PSScriptRoot\Dependencies\SqlServer\22.1.1\SqlServer.psd1"
 
             # Getting the MSSQL Instance
-            $Pass = ConvertTo-SecureString "password" -AsPlainText -Force
-            [pscredential]$Creds = New-Object System.Management.Automation.PSCredential ("connectadmin@xyz.root", $Pass)
-            #$Creds = (Get-Credential)
-            $MSSQLInstanceName = Invoke-Command -ComputerName ($DBCreds.Address) -Credential $Creds -ScriptBlock {  Write-Host $($DBCreds.Address) }
+            $DatabaseWindowsUsername = Read-Host -Prompt "Please enter a user for the Windows Database Server"
+            $DatabaseWindowsPassword = Read-Host -Prompt "Please enter a password for the Windows Database Server" -AsSecureString
+            #$Pass = ConvertTo-SecureString "password" -AsPlainText -Force
+            $Creds = [pscredential](New-Object System.Management.Automation.PSCredential ($DatabaseWindowsUsername, $DatabaseWindowsPassword))
+
+            $VarGetMSSQLInstancesPort = ${function:Get-MSSQLInstancesPort}
+            $MSSQLInstanceName = Invoke-Command -ComputerName ($DBCreds.Address) -Credential $Creds -ScriptBlock ${function:Get-MSSQLInstancesPort} -Argumentlist ($DBCreds.Address)
             Write-Host $MSSQLInstanceName
             return $True
             
