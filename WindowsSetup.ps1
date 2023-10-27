@@ -182,11 +182,16 @@ Function Test-DatabaseCredentials {
             # Getting Credentials to Windows Server containing the Database
             $DatabaseWindowsUsername = Read-Host -Prompt "Please enter a user for the Windows Database Server"
             $DatabaseWindowsPassword = Read-Host -Prompt "Please enter a password for the Windows Database Server" -AsSecureString
-            $Creds = [pscredential](New-Object System.Management.Automation.PSCredential ($DatabaseWindowsUsername, $DatabaseWindowsPassword))
+            $WindowsCreds = [pscredential](New-Object System.Management.Automation.PSCredential ($DatabaseWindowsUsername, $DatabaseWindowsPassword))
 
-            # Getting the MSSQL Instance
-            $MSSQLInstanceName = Invoke-Command -ComputerName ($DBCreds.Address) -Credential $Creds -ScriptBlock ${function:Get-MSSQLInstancesPort} -Argumentlist ($DBCreds.Address)
-            Write-Host $MSSQLInstanceName
+            # Getting the MSSQL Instance Name
+            $MSSQLInstanceName = Invoke-Command -ComputerName ($DBCreds.Address) -Credential $WindowsCreds -ScriptBlock ${function:Get-MSSQLInstancesPort} -Argumentlist ($DBCreds.Address) -ErrorVariable ErrorCode -ErrorAction SilentlyContinue
+
+            # Return fail if provided user doesn't have enough permissions o nthe windows database server
+            if ("" -ne $ErrorCode)
+            { return $False }
+
+            Write-Host $MSSQLInstanceName.Name
             return $True
         }
 
@@ -206,8 +211,8 @@ Function Test-DatabaseCredentials {
 
 }
 
-# Function Invoke-DatabaseConnector
-Function Invoke-DatabaseConnector {
+# Function Set-DatabaseConnector
+Function Set-DatabaseConnector {
 
     # Setting Variables for upcoming text
     $DatabasesAmount = Get-DatabaseListInfo -DBAmount -DBHashtable $ConstDatabasesList;
@@ -338,6 +343,7 @@ Clear-Host
 Get-Dependencies
 
 # Starting Database Connector
+Set-DatabaseConnector
 Invoke-DatabaseConnector
 
 # Starting Frontend GUI
