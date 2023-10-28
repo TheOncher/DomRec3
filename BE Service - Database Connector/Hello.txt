@@ -10,4 +10,4 @@ looks in workingdb global variable and according to that creates a file with jso
 
 1 async
 breaks down json to database name, table name (timestamp) and insert to correct databse
-and 
+and d
