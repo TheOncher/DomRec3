@@ -1,14 +1,15 @@
 # syntax=docker/dockerfile:1.3
 # escape=`
 
-FROM debian:latest
+FROM python:latest
 
 LABEL Author="Or Ben Shimon"`
-    LABEL Corp="BenShimonTechnologiesLLC"`
-    LABEL Project="DomRec"`
-    LABEL Version="3"`
-    LABEL Minor="Alpha 1.0"
-ENV DBCredentials_File = ./DBCredentials.json
+    Corp="BenShimonTechnologiesLLC"`
+    Project="DomRec"`
+    Version="3"`
+    Minor="Alpha 1.0"
+
+ENV DBCredentials_File = ./Configuration/DBCredentials.json
 
 
 CMD []
