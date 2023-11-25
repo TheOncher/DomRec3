@@ -1,2 +1,3 @@
+.vscode
+.gitattributes
 Dependencies/Docker Images/
-Dependencies/domrec-databaseconnector.tar
