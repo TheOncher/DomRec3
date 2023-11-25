@@ -1,2 +1,4 @@
 # DomRec3
- Network Domain Reconnaissance
+ **Network Mapping and Reconnaissance**
+
+ **All Relevent Information and Documentation are in the Wiki Tab**
