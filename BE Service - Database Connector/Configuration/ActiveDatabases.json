@@ -1,4 +1,0 @@
-{
-    "Active": ["MicrosoftSQL"],
-    "InActive": ["PostgresSQL","MongoDB","MySQL","SQLite"]
-}

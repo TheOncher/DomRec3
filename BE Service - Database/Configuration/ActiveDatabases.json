@@ -1,0 +1,1 @@
+{"ActiveDatabasePlaceholders":["PostgresSQL"],"DisabledDatabasePlaceholders":["MongoDB","SQLite","MySQL","MicrosoftSQL"],"ActiveDatabaseEngines":["PostgresSQL"],"DisabledDatabaseEngines":["MongoDB","SQLite","MySQL","MicrosoftSQL"],"FrontendUsage":"PostgresSQL"}
